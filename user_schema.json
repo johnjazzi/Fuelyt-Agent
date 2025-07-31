@@ -1,0 +1,292 @@
+{
+  "user_id": "string",
+  "profile": {
+    "name": "string",
+    "age": "number",
+    "gender": "string",
+    "height_cm": "number",
+    "weight_kg": "number",
+    "activity_level": "string (sedentary|lightly_active|moderately_active|very_active|extremely_active)",
+    "sport": "string",
+    "experience_level": "string (beginner|intermediate|advanced|professional)",
+    "dietary_restrictions": ["string"],
+    "allergies": ["string"],
+    "preferences": {
+      "meal_prep_time": "string (quick|moderate|elaborate)",
+      "cooking_skill": "string (beginner|intermediate|advanced)",
+      "budget_range": "string (low|medium|high)",
+      "cuisine_preferences": ["string"]
+    }
+  },
+  "goals": {
+    "primary_goal": "string (weight_loss|muscle_gain|endurance|strength|maintenance|performance)",
+    "target_weight_kg": "number",
+    "target_body_fat_percentage": "number",
+    "performance_goals": ["string"],
+    "timeline": "string",
+    "daily_calorie_target": "number",
+    "macro_targets": {
+      "protein_g": "number",
+      "carbs_g": "number",
+      "fat_g": "number",
+      "fiber_g": "number"
+    }
+  },
+  "workouts": {
+    "logged_workouts": [
+      {
+        "id": "string",
+        "date": "ISO_string",
+        "type": "string (cardio|strength|flexibility|sport_specific|recovery)",
+        "duration_minutes": "number",
+        "intensity": "string (low|moderate|high|max)",
+        "exercises": [
+          {
+            "name": "string",
+            "sets": "number",
+            "reps": "number",
+            "weight_kg": "number",
+            "duration_minutes": "number",
+            "distance_km": "number",
+            "calories_burned": "number"
+          }
+        ],
+        "pre_workout_nutrition": {
+          "foods": ["string"],
+          "timing_minutes_before": "number"
+        },
+        "during_workout_nutrition": {
+          "foods": ["string"],
+          "fluids_ml": "number"
+        },
+        "post_workout_nutrition": {
+          "foods": ["string"],
+          "timing_minutes_after": "number"
+        },
+        "performance_notes": "string",
+        "energy_level": "number (1-10)",
+        "recovery_rating": "number (1-10)"
+      }
+    ],
+    "planned_workouts": [
+      {
+        "id": "string",
+        "scheduled_date": "ISO_string",
+        "type": "string",
+        "planned_duration_minutes": "number",
+        "planned_intensity": "string",
+        "goals": ["string"],
+        "pre_workout_plan": {
+          "recommended_foods": ["string"],
+          "timing_minutes_before": "number"
+        }
+      }
+    ]
+  },
+  "nutrition": {
+    "daily_logs": [
+      {
+        "date": "ISO_string",
+        "meals": [
+          {
+            "id": "string",
+            "type": "string (breakfast|lunch|dinner|snack|pre_workout|post_workout|during_workout)",
+            "time": "ISO_string",
+            "foods": [
+              {
+                "name": "string",
+                "quantity": "number",
+                "unit": "string (g|ml|cup|piece|serving)",
+                "calories": "number",
+                "macros": {
+                  "protein_g": "number",
+                  "carbs_g": "number",
+                  "fat_g": "number",
+                  "fiber_g": "number",
+                  "sugar_g": "number",
+                  "sodium_mg": "number"
+                },
+                "micronutrients": {
+                  "vitamin_c_mg": "number",
+                  "iron_mg": "number",
+                  "calcium_mg": "number",
+                  "potassium_mg": "number"
+                }
+              }
+            ],
+            "total_calories": "number",
+            "total_macros": {
+              "protein_g": "number",
+              "carbs_g": "number",
+              "fat_g": "number",
+              "fiber_g": "number"
+            }
+          }
+        ],
+        "daily_totals": {
+          "calories": "number",
+          "protein_g": "number",
+          "carbs_g": "number",
+          "fat_g": "number",
+          "fiber_g": "number",
+          "water_ml": "number"
+        },
+        "adherence_to_goals": {
+          "calorie_percentage": "number",
+          "protein_percentage": "number",
+          "carbs_percentage": "number",
+          "fat_percentage": "number"
+        }
+      }
+    ],
+    "favorite_foods": [
+      {
+        "name": "string",
+        "category": "string",
+        "calories_per_100g": "number",
+        "macros_per_100g": {
+          "protein_g": "number",
+          "carbs_g": "number",
+          "fat_g": "number",
+          "fiber_g": "number"
+        }
+      }
+    ],
+    "meal_plans": [
+      {
+        "id": "string",
+        "name": "string",
+        "duration_days": "number",
+        "goal": "string",
+        "daily_meals": [
+          {
+            "day": "number",
+            "meals": ["meal_object"]
+          }
+        ]
+      }
+    ]
+  },
+  "recipes": {
+    "saved_recipes": [
+      {
+        "id": "string",
+        "name": "string",
+        "category": "string (breakfast|lunch|dinner|snack|pre_workout|post_workout)",
+        "prep_time_minutes": "number",
+        "cook_time_minutes": "number",
+        "servings": "number",
+        "difficulty": "string (easy|medium|hard)",
+        "ingredients": [
+          {
+            "name": "string",
+            "quantity": "number",
+            "unit": "string"
+          }
+        ],
+        "instructions": ["string"],
+        "nutrition_per_serving": {
+          "calories": "number",
+          "protein_g": "number",
+          "carbs_g": "number",
+          "fat_g": "number",
+          "fiber_g": "number"
+        },
+        "tags": ["string"],
+        "rating": "number (1-5)",
+        "notes": "string"
+      }
+    ]
+  },
+  "calendar": {
+    "scheduled_items": [
+      {
+        "id": "string",
+        "type": "string (workout|meal|meal_prep|hydration_reminder)",
+        "title": "string",
+        "date": "ISO_string",
+        "start_time": "ISO_string",
+        "end_time": "ISO_string",
+        "details": "object",
+        "reminders": [
+          {
+            "type": "string (notification|email)",
+            "minutes_before": "number"
+          }
+        ],
+        "completed": "boolean"
+      }
+    ]
+  },
+  "progress_tracking": {
+    "body_measurements": [
+      {
+        "date": "ISO_string",
+        "weight_kg": "number",
+        "body_fat_percentage": "number",
+        "muscle_mass_kg": "number",
+        "measurements": {
+          "chest_cm": "number",
+          "waist_cm": "number",
+          "hips_cm": "number",
+          "arms_cm": "number",
+          "thighs_cm": "number"
+        }
+      }
+    ],
+    "performance_metrics": [
+      {
+        "date": "ISO_string",
+        "metric_type": "string",
+        "value": "number",
+        "unit": "string",
+        "context": "string"
+      }
+    ],
+    "energy_mood_tracking": [
+      {
+        "date": "ISO_string",
+        "energy_level": "number (1-10)",
+        "mood": "string",
+        "sleep_hours": "number",
+        "stress_level": "number (1-10)",
+        "notes": "string"
+      }
+    ]
+  },
+  "settings": {
+    "units": {
+      "weight": "string (kg|lbs)",
+      "distance": "string (km|miles)",
+      "temperature": "string (celsius|fahrenheit)"
+    },
+    "notifications": {
+      "meal_reminders": "boolean",
+      "workout_reminders": "boolean",
+      "hydration_reminders": "boolean",
+      "progress_check_ins": "boolean"
+    },
+    "privacy": {
+      "share_data": "boolean",
+      "analytics": "boolean"
+    }
+  },
+  "ai_context": {
+    "conversation_history": [
+      {
+        "timestamp": "ISO_string",
+        "user_message": "string",
+        "agent_response": "string",
+        "context": "object"
+      }
+    ],
+    "preferences_learned": {
+      "communication_style": "string",
+      "preferred_meal_types": ["string"],
+      "workout_preferences": ["string"],
+      "learning_patterns": "object"
+    }
+  },
+  "created_at": "ISO_string",
+  "updated_at": "ISO_string"
+}
