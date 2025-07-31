@@ -1,50 +1,99 @@
-from .data_models import User, ChatMessage
+from langchain.agents import AgentExecutor, create_openai_functions_agent
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_openai import ChatOpenAI
+from langchain.tools import tool
+from .data_models import ChatMessage, User
 from .database_manager import db_manager
 from .config import settings
-from langchain_openai import ChatOpenAI
-from langchain.schema import SystemMessage, HumanMessage, AIMessage
-import asyncio
+from .tools import (
+    log_workout, update_user_profile, log_meal, create_or_update_goal,
+    LogWorkoutInput, UpdateUserProfileInput, LogMealInput, CreateOrUpdateGoalInput
+)
+import json
+
+# Load system prompt from file
+with open("agent/system_prompt.txt", "r") as f:
+    SYSTEM_PROMPT = f.read()
+
+# Define the tools
+tools = [
+    tool(log_workout, args_schema=LogWorkoutInput),
+    tool(update_user_profile, args_schema=UpdateUserProfileInput),
+    tool(log_meal, args_schema=LogMealInput),
+    tool(create_or_update_goal, args_schema=CreateOrUpdateGoalInput),
+]
 
 class AgentHandler:
     def __init__(self):
-        self.chat_model = ChatOpenAI(api_key=settings.OPENAI_API_KEY, model="gpt-4-turbo-preview", streaming=True)
+        self.chat_model = ChatOpenAI(
+            api_key=settings.OPENAI_API_KEY,
+            model="gpt-4-turbo-preview",
+            streaming=True,
+        )
+        self.agent = create_openai_functions_agent(
+            llm=self.chat_model,
+            tools=tools,
+            prompt=self._create_prompt(),
+        )
+        self.agent_executor = AgentExecutor(agent=self.agent, tools=tools, verbose=True)
+
+    def _create_prompt(self):
+        return ChatPromptTemplate.from_messages([
+            ("system", SYSTEM_PROMPT),
+            MessagesPlaceholder(variable_name="chat_history"),
+            ("user", "{input}"),
+            MessagesPlaceholder(variable_name="agent_scratchpad"),
+        ])
 
     async def handle_chat(self, chat_message: ChatMessage):
         user = db_manager.get_user(chat_message.user_id)
         if not user:
-            yield "data: {\"error\": \"User not found\"}\n\n"
-            return
+            # If user does not exist, create a new one with default values
+            new_user_data = {
+                "profile": {
+                    "name": "Demo User",
+                    "age": 30,
+                    "gender": "Not specified",
+                    "height_cm": 175,
+                    "weight_kg": 70
+                },
+                "goals": {
+                    "primary_goal": "maintenance"
+                }
+            }
+            user = User(user_id=chat_message.user_id, **new_user_data)
+            db_manager.create_user(user)
 
-        user_profile_and_goals = {
-            "profile": user.profile.dict(),
-            "goals": user.goals.dict()
-        }
-
-        messages = [
-            SystemMessage(content="You are a world-class athletic performance coach..."),
-            HumanMessage(content=f"Here is my data: {user_profile_and_goals}"),
-        ]
+        chat_history = self._reconstruct_history(user)
         
-        clean_history = []
-        for ch in user.ai_context.get("conversation_history", []):
-            if isinstance(ch, dict) and "user" in ch and "ai" in ch:
-                clean_history.append(ch)
-                messages.append(HumanMessage(content=ch["user"]))
-                messages.append(AIMessage(content=ch["ai"]))
-
-        messages.append(HumanMessage(content=chat_message.message))
+        # Prepend the user_id to the message to ensure the agent has it
+        augmented_message = f"User ID: {chat_message.user_id}\n\n{chat_message.message}"
 
         full_response = ""
-        try:
-            async for chunk in self.chat_model.astream(messages):
-                full_response += chunk.content
-                yield f"data: {chunk.content}\n\n"
+        async for chunk in self.agent_executor.astream({
+            "input": augmented_message,
+            "chat_history": chat_history,
+        }):
+            if "output" in chunk:
+                full_response += chunk["output"]
+                yield f"data: {json.dumps({'content': chunk['output']})}\n\n"
         
-        finally:
-            # Update conversation history once the full response is received
-            clean_history.append({"user": chat_message.message, "ai": full_response})
-            user.ai_context["conversation_history"] = clean_history
-            db_manager.update_user(user.user_id, {"ai_context": user.ai_context})
+        # After streaming is complete, save the conversation history
+        self._update_conversation_history(user, chat_message.message, full_response)
+
+    def _reconstruct_history(self, user: User):
+        history = []
+        for message in user.ai_context.get("conversation_history", []):
+            if isinstance(message, dict) and "user" in message and "ai" in message:
+                history.append(HumanMessage(content=message["user"]))
+                history.append(AIMessage(content=message["ai"]))
+        return history
+
+    def _update_conversation_history(self, user: User, user_message: str, ai_response: str):
+        history = user.ai_context.get("conversation_history", [])
+        history.append({"user": user_message, "ai": ai_response})
+        user.ai_context["conversation_history"] = history
+        db_manager.update_user(user.user_id, {"ai_context": user.ai_context})
 
 agent_handler = AgentHandler()
-

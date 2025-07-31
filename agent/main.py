@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import StreamingResponse
 from .data_models import ChatMessage, User
-from .handler import agent_handler
+from .handler import agent_handler, tools
 from .database_manager import db_manager
 
 app = FastAPI(
@@ -40,3 +40,8 @@ async def chat(chat_message: ChatMessage):
 async def create_user(user: User):
     """Create a new user."""
     return db_manager.create_user(user)
+
+@app.get("/tools", tags=["Agent"])
+async def get_tools():
+    """Return the list of available tools."""
+    return {"tools": [tool.name for tool in tools]}

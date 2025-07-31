@@ -20,7 +20,32 @@ class DatabaseManager:
 
     def update_user(self, user_id: str, updates: Dict[str, Any]) -> Optional[User]:
         UserQuery = Query()
-        self.users_table.update(updates, UserQuery.user_id == user_id)
+        
+        # To handle nested updates correctly, we'll fetch the user, update the
+        # specific fields, and then write the entire object back.
+        user_data = self.users_table.get(UserQuery.user_id == user_id)
+        if not user_data:
+            return None
+        
+        for key, value in updates.items():
+            # This logic can be expanded to handle deeper nesting if needed
+            if '.' in key:
+                # Handle nested keys like "profile.name"
+                # This is a simple implementation and might need to be more robust
+                # depending on the complexity of the updates.
+                parts = key.split('.')
+                d = user_data
+                for part in parts[:-1]:
+                    d = d.setdefault(part, {})
+                d[parts[-1]] = value
+            else:
+                user_data[key] = value
+
+        self.users_table.update(user_data, UserQuery.user_id == user_id)
         return self.get_user(user_id)
+
+    def update_user_workouts(self, user_id: str, workouts: Dict[str, Any]) -> Optional[User]:
+        """A dedicated method to update the workouts field."""
+        return self.update_user(user_id, {"workouts": workouts})
 
 db_manager = DatabaseManager()

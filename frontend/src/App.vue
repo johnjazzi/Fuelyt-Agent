@@ -129,7 +129,13 @@ export default {
           parts.slice(0, -1).forEach(part => {
             if (part.startsWith('data: ')) {
               const dataContent = part.substring(6);
-              this.updateAssistantMessage(dataContent);
+              try {
+                const parsedData = JSON.parse(dataContent);
+                this.updateAssistantMessage(parsedData);
+              } catch (e) {
+                // Not a JSON object, treat as a simple string
+                this.updateAssistantMessage({ content: dataContent });
+              }
             }
           });
 
@@ -159,8 +165,8 @@ export default {
 
     updateAssistantMessage(chunk) {
       const assistantMessage = this.messages.find(m => m.id === this.assistantMessageId);
-      if (assistantMessage) {
-        assistantMessage.content += this.formatMessage(chunk);
+      if (assistantMessage && chunk.content) {
+        assistantMessage.content += this.formatMessage(chunk.content);
         this.$nextTick(this.scrollToBottom);
       }
     },
