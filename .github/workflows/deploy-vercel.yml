@@ -1,0 +1,43 @@
+name: Deploy Fuelyt Agent to Vercel
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'agent/**'
+      - 'database_manager.py'
+      - 'config.py'
+      - 'utils.py'
+      - 'data_models.py'
+      - 'deployment/vercel/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - name: Install Vercel CLI
+        run: npm install -g vercel
+      
+      - name: Copy files to Vercel deployment directory
+        run: |
+          cp -r agent deployment/vercel/
+          cp database_manager.py deployment/vercel/
+          cp config.py deployment/vercel/
+          cp utils.py deployment/vercel/
+          cp data_models.py deployment/vercel/
+      
+      - name: Deploy to Vercel
+        working-directory: deployment/vercel
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          vercel --prod --token $VERCEL_TOKEN

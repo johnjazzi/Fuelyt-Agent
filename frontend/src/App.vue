@@ -73,8 +73,6 @@
 </template>
 
 <script>
-import axios from 'axios'
-
 export default {
   name: 'FuelytChat',
   data() {
@@ -84,132 +82,127 @@ export default {
       userId: 'demo_athlete',
       isTyping: false,
       error: null,
-      messageIdCounter: 1
-    }
+      messageIdCounter: 1,
+      assistantMessageId: null,
+    };
   },
   methods: {
     async sendMessage() {
-      if (!this.currentMessage.trim() || !this.userId.trim()) return
-      
-      const userMessage = this.currentMessage.trim()
-      this.currentMessage = ''
-      this.error = null
-      
-      // Add user message to chat
-      this.addMessage('user', userMessage)
-      
-      // Show typing indicator
-      this.isTyping = true
-      
+      if (!this.currentMessage.trim() || !this.userId.trim()) return;
+
+      const userMessage = this.currentMessage.trim();
+      this.addMessage('user', userMessage);
+      this.currentMessage = '';
+      this.isTyping = true;
+      this.error = null;
+
       try {
-        // Send message to backend
-        const response = await axios.post('/api/chat', {
-          user_id: this.userId,
-          message: userMessage,
-          context: {
-            timestamp: new Date().toISOString(),
-            source: 'web_interface'
-          }
-        })
-        
-        const data = response.data
-        
-        // Add assistant response
-        this.addMessage('assistant', data.response, data.recommendations)
-        
-        // Show any actions taken
-        if (data.actions_taken && data.actions_taken.length > 0) {
-          this.addMessage('system', `Actions completed: ${data.actions_taken.join(', ')}`)
+        const response = await fetch('http://localhost:8000/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'text/event-stream',
+          },
+          body: JSON.stringify({
+            user_id: this.userId,
+            message: userMessage,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        this.assistantMessageId = this.messageIdCounter++;
+        this.addMessage('assistant', '', null, this.assistantMessageId);
+
+        let buffer = '';
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const parts = buffer.split('\n\n');
+          
+          parts.slice(0, -1).forEach(part => {
+            if (part.startsWith('data: ')) {
+              const dataContent = part.substring(6);
+              this.updateAssistantMessage(dataContent);
+            }
+          });
+
+          buffer = parts[parts.length - 1];
+        }
       } catch (error) {
-        console.error('Error sending message:', error)
-        this.error = error.response?.data?.detail || 'Failed to send message. Please try again.'
-        this.addMessage('system', 'Sorry, I encountered an error. Please try again.')
+        console.error('Error sending message:', error);
+        this.error = 'Failed to send message. Please try again.';
+        this.addMessage('system', 'Sorry, I encountered an error.');
       } finally {
-        this.isTyping = false
-        this.scrollToBottom()
+        this.isTyping = false;
+        this.scrollToBottom();
       }
     },
-    
-    addMessage(type, content, recommendations = null) {
+
+    addMessage(type, content, recommendations = null, id = null) {
+      const messageId = id || this.messageIdCounter++;
       this.messages.push({
-        id: this.messageIdCounter++,
+        id: messageId,
         type,
         content: this.formatMessage(content),
         recommendations,
-        timestamp: new Date()
-      })
-      this.$nextTick(() => {
-        this.scrollToBottom()
-      })
+        timestamp: new Date(),
+      });
+      this.$nextTick(this.scrollToBottom);
     },
-    
+
+    updateAssistantMessage(chunk) {
+      const assistantMessage = this.messages.find(m => m.id === this.assistantMessageId);
+      if (assistantMessage) {
+        assistantMessage.content += this.formatMessage(chunk);
+        this.$nextTick(this.scrollToBottom);
+      }
+    },
+
     formatMessage(content) {
-      // Basic markdown-like formatting
       return content
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
         .replace(/\*(.*?)\*/g, '<em>$1</em>')
-        .replace(/\n/g, '<br>')
+        .replace(/\n/g, '<br>');
     },
-    
+
     addNewLine() {
-      this.currentMessage += '\n'
+      this.currentMessage += '\n';
     },
-    
+
     scrollToBottom() {
       this.$nextTick(() => {
-        const container = this.$refs.messagesContainer
-        if (container) {
-          container.scrollTop = container.scrollHeight
+        if (this.$refs.messagesContainer) {
+          this.$refs.messagesContainer.scrollTop = this.$refs.messagesContainer.scrollHeight;
         }
-      })
+      });
     },
-    
-    // Auto-resize textarea
+
     autoResize() {
-      const textarea = this.$refs.messageInput
+      const textarea = this.$refs.messageInput;
       if (textarea) {
-        textarea.style.height = 'auto'
-        textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px'
+        textarea.style.height = 'auto';
+        textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`;
       }
-    }
+    },
   },
-  
   watch: {
     currentMessage() {
-      this.$nextTick(() => {
-        this.autoResize()
-      })
-    }
+      this.$nextTick(this.autoResize);
+    },
   },
-  
   mounted() {
-    // Focus on message input
     this.$nextTick(() => {
       if (this.$refs.messageInput) {
-        this.$refs.messageInput.focus()
+        this.$refs.messageInput.focus();
       }
-    })
-    
-    // Test connection on mount
-    this.testConnection()
+    });
   },
-  
-  methods: {
-    ...this.methods,
-    
-    async testConnection() {
-      try {
-        const response = await axios.get('/api/')
-        if (response.data.status === 'healthy') {
-          this.addMessage('system', 'Connected to Fuelyt AI successfully! 🚀')
-        }
-      } catch (error) {
-        this.error = 'Unable to connect to Fuelyt backend. Make sure the server is running on port 8000.'
-        console.error('Connection test failed:', error)
-      }
-    }
-  }
-}
+};
 </script>
