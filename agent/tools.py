@@ -1,5 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional
+from datetime import date
+import json
 
 # --- Tool Input Schemas ---
 
@@ -37,6 +39,27 @@ class UpdateUserProfileInput(BaseModel):
     experience_level: Optional[str] = Field(None, description="The user's experience level.")
     dietary_restrictions: Optional[List[str]] = Field(None, description="A list of dietary restrictions.")
     allergies: Optional[List[str]] = Field(None, description="A list of allergies.")
+
+class ScheduleWorkoutInput(BaseModel):
+    user_id: str = Field(..., description="The ID of the user for whom to schedule the workout.")
+    workout_date: date = Field(..., description="The date of the workout.")
+    time_of_day: str = Field(..., description="The time of day for the workout (e.g., 'morning', 'afternoon', 'evening').")
+    workout_type: str = Field(..., description="The type of workout to schedule.")
+    intensity: str = Field(..., description="The intensity of the workout (e.g., 'low', 'medium', 'high').")
+    duration_minutes: Optional[int] = Field(None, description="The duration of the workout in minutes.")
+    notes: Optional[str] = Field(None, description="Any additional notes for the workout.")
+
+class ScheduleMealInput(BaseModel):
+    user_id: str = Field(..., description="The ID of the user for whom to schedule the meal.")
+    meal_date: date = Field(..., description="The date of the meal.")
+    meal_type: str = Field(..., description="The type of meal to schedule (e.g., 'breakfast', 'lunch', 'dinner', 'snack').")
+    description: str = Field(..., description="A description of the meal.")
+    calories: Optional[int] = Field(None, description="The estimated number of calories in the meal.")
+
+class GetScheduleInput(BaseModel):
+    user_id: str = Field(..., description="The ID of the user whose schedule should be retrieved.")
+    start_date: date = Field(..., description="The start date of the schedule to retrieve.")
+    end_date: Optional[date] = Field(None, description="The end date of the schedule to retrieve. Defaults to the start date.")
 
 # --- Tool Functions ---
 
@@ -111,3 +134,63 @@ def update_user_profile(user_id: str, **kwargs) -> str:
     
     db_manager.update_user(user_id, {"profile": user.profile.dict()})
     return f"Successfully updated profile for user {user_id}."
+
+def schedule_workout(user_id: str, workout_date: date, time_of_day: str, workout_type: str, intensity: str, duration_minutes: Optional[int] = None, notes: Optional[str] = None) -> str:
+    """Schedules a new workout for the user."""
+    from .database_manager import db_manager
+    from .data_models import PlannedWorkout
+    user = db_manager.get_user(user_id)
+    if not user:
+        return f"Error: User with ID '{user_id}' not found."
+
+    planned_workout = PlannedWorkout(
+        workout_date=workout_date,
+        time_of_day=time_of_day,
+        workout_type=workout_type,
+        intensity=intensity,
+        duration_minutes=duration_minutes,
+        notes=notes,
+    )
+    
+    user.calendar["scheduled_items"].append(planned_workout.dict())
+    db_manager.update_user(user_id, {"calendar": user.calendar})
+    return f"Successfully scheduled a {workout_type} workout for user {user_id} on {workout_date} in the {time_of_day}."
+
+def schedule_meal(user_id: str, meal_date: date, meal_type: str, description: str, calories: Optional[int] = None) -> str:
+    """Schedules a new meal for the user."""
+    from .database_manager import db_manager
+    from .data_models import PlannedMeal
+    user = db_manager.get_user(user_id)
+    if not user:
+        return f"Error: User with ID '{user_id}' not found."
+
+    planned_meal = PlannedMeal(
+        meal_date=meal_date,
+        meal_type=meal_type,
+        description=description,
+        calories=calories,
+    )
+
+    user.calendar["scheduled_items"].append(planned_meal.dict())
+    db_manager.update_user(user_id, {"calendar": user.calendar})
+    return f"Successfully scheduled a {meal_type} for user {user_id} on {meal_date}."
+
+def get_schedule(user_id: str, start_date: date, end_date: Optional[date] = None) -> str:
+    """Retrieves the user's schedule for a given date range."""
+    from .database_manager import db_manager
+    user = db_manager.get_user(user_id)
+    if not user:
+        return f"Error: User with ID '{user_id}' not found."
+
+    if end_date is None:
+        end_date = start_date
+
+    schedule = [
+        item for item in user.calendar.get("scheduled_items", [])
+        if start_date <= date.fromisoformat(item["workout_date" if "workout_date" in item else "meal_date"]) <= end_date
+    ]
+
+    if not schedule:
+        return f"No scheduled items found for user {user_id} between {start_date} and {end_date}."
+    
+    return json.dumps(schedule, default=str)

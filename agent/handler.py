@@ -8,7 +8,9 @@ from .database_manager import db_manager
 from .config import settings
 from .tools import (
     log_workout, update_user_profile, log_meal, create_or_update_goal,
-    LogWorkoutInput, UpdateUserProfileInput, LogMealInput, CreateOrUpdateGoalInput
+    schedule_workout, schedule_meal, get_schedule,
+    LogWorkoutInput, UpdateUserProfileInput, LogMealInput, CreateOrUpdateGoalInput,
+    ScheduleWorkoutInput, ScheduleMealInput, GetScheduleInput
 )
 import json
 
@@ -22,6 +24,9 @@ tools = [
     tool(update_user_profile, args_schema=UpdateUserProfileInput),
     tool(log_meal, args_schema=LogMealInput),
     tool(create_or_update_goal, args_schema=CreateOrUpdateGoalInput),
+    tool(schedule_workout, args_schema=ScheduleWorkoutInput),
+    tool(schedule_meal, args_schema=ScheduleMealInput),
+    tool(get_schedule, args_schema=GetScheduleInput),
 ]
 
 class AgentHandler:
@@ -36,7 +41,7 @@ class AgentHandler:
             tools=tools,
             prompt=self._create_prompt(),
         )
-        self.agent_executor = AgentExecutor(agent=self.agent, tools=tools, verbose=True)
+        self.agent_executor = AgentExecutor(agent=self.agent, tools=tools, verbose=False)
 
     def _create_prompt(self):
         return ChatPromptTemplate.from_messages([

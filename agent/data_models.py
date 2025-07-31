@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 import uuid
+from datetime import date
 
 class Profile(BaseModel):
     name: str
@@ -24,6 +25,20 @@ class Goals(BaseModel):
     target_weight_kg: Optional[float] = None
     daily_calorie_target: Optional[float] = None
     macro_targets: Optional[MacroTargets] = None
+
+class PlannedWorkout(BaseModel):
+    workout_date: date
+    time_of_day: str  # E.g., "morning", "afternoon", "evening"
+    workout_type: str
+    intensity: str  # E.g., "low", "medium", "high"
+    duration_minutes: Optional[int] = None
+    notes: Optional[str] = None
+
+class PlannedMeal(BaseModel):
+    meal_date: date
+    meal_type: str  # E.g., "breakfast", "lunch", "dinner", "snack"
+    description: str
+    calories: Optional[int] = None
 
 class User(BaseModel):
     user_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
