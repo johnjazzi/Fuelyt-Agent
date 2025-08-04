@@ -3,6 +3,11 @@
 # Exit immediately if a command exits with a non-zero status.
 set -e
 
+# Load environment variables from .env file if it exists
+if [ -f .env ]; then
+  export $(cat .env | sed 's/#.*//g' | xargs)
+fi
+
 # Create a virtual environment
 if [ ! -d "venv" ]; then
     python3 -m venv venv

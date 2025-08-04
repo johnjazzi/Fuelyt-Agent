@@ -7,3 +7,5 @@ openai
 pydantic
 langchain-community
 langchain-openai
+arize-phoenix-otel
+openinference-instrumentation-langchain

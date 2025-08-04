@@ -4,6 +4,20 @@ from starlette.responses import StreamingResponse
 from .data_models import ChatMessage, User
 from .handler import agent_handler, tools
 from .database_manager import db_manager
+from phoenix.otel import register
+from openinference.instrumentation.langchain import LangChainInstrumentor
+from .config import settings
+
+# Phoenix tracing
+tracer_provider = register(
+  project_name=settings.PHOENIX_PROJECT_NAME,
+  endpoint=settings.PHOENIX_ENDPOINT,
+  protocol="http/protobuf",
+  batch=True,
+  auto_instrument=False
+)
+LangChainInstrumentor().instrument(tracer_provider=tracer_provider)
+
 
 app = FastAPI(
     title="Fuelyt AI Agent",
